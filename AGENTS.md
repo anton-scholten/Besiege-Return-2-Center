@@ -125,21 +125,31 @@ the machine has been simulating for a frame, hence the `hasStarted`/`startFrames
 dance at the top of `SimulateUpdateHost`. The official module does the same, for
 the same reason.
 
-**`AngleMin`/`AngleMax` are read once, at that third frame, and are not the same
-thing as `limits.Min`/`limits.Max`.** The block applies two independent flips to
-the limits range — `FlipInvert`, which is whether the *block* was mirrored, and
-`FlipLimits`, which is a per-block XML setting because the hinge and the block
-have their spin axes pointing opposite ways. The official module applies neither
-and reads `limits.Min`/`limits.Max` straight. Do not "simplify" this to match it.
+**`angleMin`/`angleMax` are read once, in `Begin`, and are not the same thing as
+`limits.Min`/`limits.Max`.** The block applies two independent flips to the limits
+range — `FlipInvert`, which is whether the *block* was mirrored, and `FlipLimits`,
+which is a per-block XML setting because the hinge and the block have their spin
+axes pointing opposite ways. Either one alone swaps the ends; both together cancel,
+which is why `Begin` tests them with `!=`. The official module applies neither and
+reads `limits.Min`/`limits.Max` straight. Do not "simplify" this to match it.
+
+They are magnitudes, not signed bounds: the usable range is `-angleMin`
+to `angleMax`.
 
 **The three modes differ only in what drives `input`.** All three end in the same
 two operations — `Steer` to turn towards a demand and clamp at the limits, or
 `ReturnToCentre` to wind back to zero without overshooting. In the 2018 assembly
-those two bodies were written out three times each; they are one method each now.
-See [docs/RECOVERY.md](docs/RECOVERY.md) for the check that says the six copies
-were identical.
+those two bodies were written out three times each, along with the limit test and
+the toggle latch; they are `Steer`, `ReturnToCentre`, `AtLimit` and
+`PushToggleInput` now. See [docs/RECOVERY.md](docs/RECOVERY.md) for the check that
+says the copies were identical, and for the simulation that says the refactoring
+kept them that way.
 
-**`SetAngle0` exists so the last step back to centre reaches the joint.** The
+The one mode that does *not* share the latch is S2S, and that is not an oversight:
+a second press stops it where it stands, where R2C and Normal hand control back to
+the raw keys and go on steering until you let go.
+
+**`angleWasNonZero` exists so the last step back to centre reaches the joint.** The
 joint is only written when `angleToBe != 0`, so without a flag the frame that
 finally lands on exactly zero would be skipped and the block would stop a hair
 off centre. The flag makes that one frame go through.

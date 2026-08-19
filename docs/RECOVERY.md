@@ -41,10 +41,13 @@ What does **not** survive is what you would expect: local variable names,
 parameter names of private methods, comments, and the file layout. Local names in
 the reconstruction are chosen for readability.
 
-Field names *did* survive, and they are a mix of casing conventions — `leftKey`
+Field names *did* survive, and they were a mix of casing conventions — `leftKey`
 and `rightKey` beside `PushToggle` and `InputClamp`, `AngleMin` beside
-`angleToBe`. That is how the assembly spells them and it has been left that way,
-because they are what the IL comparison below matches on.
+`angleToBe`. The reconstruction kept them while it was being checked against the
+assembly, and normalised them afterwards; they are private fields, so nothing
+outside the assembly ever saw them. `SetAngle0` became `angleWasNonZero`,
+`InputClamp` became `latchedInput`, `MenuChoice` became `mode`, and the rest lost
+their capitals.
 
 ## The original was not built with Besiege's compiler
 
@@ -81,6 +84,10 @@ differences that remain are, in full:
 | `SimulateUpdateHost` | reads `emuLeftValue` / `emuRightValue` / `emuWasHeld` | key emulation support |
 | `KeyEmulationUpdate`, `OnSimulateStart` | new | key emulation, and per-run reset |
 | `.ctor`, `SafeAwake` | `UnityEngine.Vector3` where the original built a `Modding.Serialization.Vector3` and let it convert | the conversion is a componentwise copy — checked, in `Vector3::op_Implicit` — so `Vector3.zero` and `new Vector3(1f, 0f, 0f)` are the same values by a shorter route |
+| `SafeAwake` | one `MotionAbout` call per axis rather than three near-identical `switch` arms | free about the spin axis, locked about the other two — which is what the three arms each spelled out |
+| `SimulateUpdateHost` | the startup frame is `Begin`, the toggle latch is `PushToggleInput`, the limit test is `AtLimit`, the per-frame step is `Rate` | each was written out two or three times |
+| `SimulateUpdateHost` | `Quaternion.Euler(axis * angleToBe)` in place of three componentwise writes into a `jointEulerRotation` field | same product; the field held nothing between frames and is gone |
+| `SafeAwake`, `Start` | the tension slider, and `ApplyTension` | new; see [AGENTS.md](../AGENTS.md) |
 
 ## The six blocks that became two methods
 
@@ -95,10 +102,33 @@ They were compared arm by arm before being replaced by `Steer` and
 right, and the float result depends on that order), whether `FlipInvert` is in
 the product at all (it is, when steering; it is not, when returning to centre),
 the guard on the clamp (`Module.HasLimits && limits.IsActive`), and the clamp's
-own shape (`< -AngleMin` pins to `-AngleMin`, `> AngleMax` pins to `AngleMax`).
+own shape (`< -angleMin` pins to `-angleMin`, `> angleMax` pins to `angleMax`).
 All six agreed. The rebuilt `Steer` and `ReturnToCentre` were then read back out
 of the new assembly and matched against the originals instruction for
 instruction.
+
+They have since been shortened further — the clamp is `Mathf.Clamp` and the wind
+back to zero is `Mathf.MoveTowards`, which is what both were spelling out — along
+with the rest of the tidy-up described below.
+
+## Checking the tidy-up
+
+The refactoring above is the kind that an IL comparison is no longer any use for:
+six blocks becoming four methods changes every instruction in the method they
+came out of. It was checked by simulation instead — both versions of the mode
+logic transcribed into Python, one from the 2018 IL and one from the C# as it now
+reads, and driven with 4,000 random traces of 400 frames each: random mode,
+random key presses and releases, the toggle and the limits switched on and off
+mid-trace, and a spread of speeds, frame times, limit ranges and flip states.
+`angleToBe`, the latch, the captured input, and whether the joint was written
+that frame were compared every frame.
+
+1.6 million frames, no differences — and bit-exact, not merely within tolerance,
+including where `Rate` regroups the five multiplications that set the step. The
+four combinations of the limits flip were checked exhaustively against the
+cascade of `if`s they replaced. The script is `.scratch/difftest.py`, which is
+not committed; it is thirty lines of each version side by side and is quicker to
+rewrite than to read.
 
 ## Reading the comparison the other way
 
