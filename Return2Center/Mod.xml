@@ -1,0 +1,38 @@
+<Mod>
+	<Name>Return 2 Center</Name>
+	<Author>wizz6rd</Author>
+	<Version>0.2.0</Version>
+	
+	<Description>
+	Adds a steering hinge and steering block with the ability to return to center upon key release.
+	This mod uses a custom steering module adapted from the official steering hinge's behavior.
+	</Description>
+	
+	<Icon name="R2C_icon" />
+	
+	<Debug>false</Debug>
+	
+	<MultiplayerCompatible>true</MultiplayerCompatible>
+	
+	<Assemblies>
+		<Assembly path="Return2CenterAssembly.dll" />
+	</Assemblies>
+	
+	<Blocks>
+		<Block path="Hinge.xml" />
+		<Block path="SteeringBlock.xml" />
+	</Blocks>
+	
+	<Resources>
+		<Mesh name="Hinge_mesh" path="steeringhinge.obj" />
+		<Texture name="Hinge_texture" path="SteeringHinge.png" />
+		
+		<Mesh name="Steering_Block_mesh" path="steeringblock.obj" />
+		<Texture name="Steering_Block_texture" path="SteeringBlock.png" />
+		
+		<Texture name="R2C_icon" path="R2C.png" />
+	</Resources>
+
+<ID>57de077e-51a8-425b-b3d1-3acccaac73f6</ID>
+
+</Mod>

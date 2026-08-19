@@ -1,0 +1,29 @@
+# Anything the build or a debugging session leaves behind. tools/build.sh works
+# in $TMPDIR, which is normally outside the repo -- .scratch is where the IL
+# dumper, the compiler host and the day's working files go when it is not.
+.scratch/
+tmp/
+*.tmp
+*.log
+*.mdb
+*.pdb
+
+# Besiege's screenshots, which is how a problem gets described in this repo:
+# they are dropped in the working copy, looked at, and are of no use afterwards.
+# Named by the game as <yyyymmddhhmmss>_<n>.jpg, so a picture that is meant to be
+# kept -- docs/something.png -- is not caught by this.
+[0-9]*_[0-9].jpg
+[0-9]*_[0-9].png
+
+# ...except the 2018 ones, which are the only pictures of the mod that exist.
+!Previous_stuff/**
+
+# Editors and desktops
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+*.pyc
+__pycache__/
