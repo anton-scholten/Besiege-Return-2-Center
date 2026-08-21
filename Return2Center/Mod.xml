@@ -1,7 +1,7 @@
 <Mod>
 	<Name>Return 2 Center</Name>
 	<Author>wizz6rd</Author>
-	<Version>0.2.0</Version>
+	<Version>0.2.1</Version>
 	
 	<Description>
 	Adds a steering hinge and steering block with the ability to return to center upon key release.
