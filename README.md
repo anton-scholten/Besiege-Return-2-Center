@@ -39,7 +39,7 @@ Two of them, a hinge and a block, matching the shape of the base-game pair.
 
 | Setting | What it does |
 | --- | --- |
-| Left / Right | The two steering keys. Default `←` and `→` |
+| Left / Right | The two steering keys. Default `←` and `→`. Each takes a variable in place of a key, like any other block's |
 | Rotation Speed | How fast it turns |
 | Tension | How hard it holds its angle, `0.5x` to `2x`. Same slider, same curve, as the built-in blocks — it bites hard, `0.5x` is a sixty-fourth of the stiffness and `2x` is sixty-four times it |
 | Toggle | Off: hold the key to steer. On: press once to start, press again to stop |

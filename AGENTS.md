@@ -172,16 +172,55 @@ nothing until the machine was reloaded — and `angleToBe` still held the angle 
 block had stopped at, so it snapped straight back there. `OnSimulateStart` now
 winds all of it back.
 
-**The block ignored emulated keys.** Modern Besiege lets one block drive another
-by emulating its keys, and the official steering module reads that through
-`MKey.EmulationValue()` in `KeyEmulationUpdate`. This one had no such override, so
-nothing could steer it but a human. It has one now.
+**The block ignored emulated keys, and so ignored variables.** Besiege lets a key
+be bound to a *variable* instead of a keyboard key, and lets one block drive
+another's keys; both arrive down the same path. `KeyInputController.Emulate` walks
+`usedMessages[name]` and calls `MKey.UpdateEmulation` on every key listening to
+that variable, so a variable-driven key is simply a key with `Emulating` true.
 
-Only the *level* is read, never `EmulationPressed`/`EmulationReleased`:
-`KeyEmulationUpdate` is driven from `Machine.FixedUpdate` while the rest of this
-runs on `Update`, so an edge read there would be missed on some frames and seen
-twice on others. The press and release edges the modes need are derived from the
-level changing instead, which is frame-rate independent.
+That matters because a key bound to a variable reports **nothing** through the
+ordinary properties: `MKey.get_Value`, `get_IsPressed` and `get_IsHeld` all test
+`useMessage` and return 0/false when it is set. A block that reads only those is
+inert under a variable, which is what this one was.
+
+So the level is folded in from `MKey.EmulationValue()`, the way the official
+steering module does, and the edges come from `EmulationPressed()` /
+`EmulationReleased()`.
+
+**The emulation edges are read on the fixed step and latched, not polled from
+`Update`.** `MKey.CheckEmulation` keeps a snapshot it advances once per
+`Time.fixedTime`, and `KeyEmulationUpdate` is the only hook that runs at that
+cadence — `Machine.FixedUpdate` calls it through `EmulationUpdateBlock`. Polling
+the edge methods from `SimulateUpdateHost` instead, which is what the official
+*shooting* module does, gets it wrong both ways: at high frame rates every frame
+sharing one fixed step sees the same press, and at low ones a pulse that begins
+and ends between two frames is never seen at all. The shooting module gets away
+with it because a rate limiter swallows the repeats; a toggle latch would not.
+
+So `KeyEmulationUpdate` latches, `ReadInput` takes and clears. Simulated against
+the old scheme, a one-step variable pulse was invisible below 60 fps and is now
+delivered down to 15; see the CHANGELOG.
+
+Two things there are deliberate and look like they could be tidied:
+
+- All four edge calls are made every step, into locals, before any `||`. Each
+  `MKey` advances its own snapshot only when one of *its* edge methods is called,
+  so short-circuiting past the right-hand key leaves it comparing against a stale
+  step on the next one. `EmulationValue()` does not advance anything, so it is no
+  substitute.
+- `ReadInput` is called before every early return in `SimulateUpdateHost`, not
+  after the guards. A latch that survives a frame the block bailed out of would
+  fire late, on a frame whose `input` no longer matches it.
+
+`KeyEmulationUpdate` returns early when `leftKey` is null. `SafeAwake` builds no
+mapper controls on a simulating client without physics, and `EmulationUpdateBlock`
+checks only `isSimulating` — so on such a client this would otherwise throw every
+other fixed step. The official steering module has the same hole.
+
+Nothing needs declaring for any of this. `BlockPrefabCreator.SetupBehaviour` sets
+`RegisterEmulationUpdate` true on every modded block, and `Machine.InitBlocks`
+turns the whole pipeline on as soon as the machine holds one block that emulates
+keys — which is exactly when a variable can do anything.
 
 **`Text` is gone.** The module carried a public `string Text { get; set; }` that
 nothing read, no block XML set, and the official module has never had — an

@@ -107,18 +107,18 @@ namespace R2CSteering
 
             float input;
             bool keyPressed;
+            bool keyReleased;
 
             /// <summary>The direction a latched push is steering in. See PushToggleInput.</summary>
             float latchedInput;
             bool pushLatched;
 
-            // Emulated key levels, sampled in KeyEmulationUpdate. Levels only, never
-            // edges: emulation runs on FixedUpdate and the rest of this on Update,
-            // so an edge read there would be missed on some frames and doubled on
-            // others. The press and release edges are derived from emuWasHeld.
+            // What a variable, or another block, is driving the two keys with.
+            // Sampled and latched in KeyEmulationUpdate; taken by ReadInput.
             float emuLeftValue;
             float emuRightValue;
-            bool emuWasHeld;
+            bool emuPressed;
+            bool emuReleased;
 
             /// <summary>Angle demanded of the joint, in degrees about <see cref="axis"/>.</summary>
             float angleToBe;
@@ -260,18 +260,58 @@ namespace R2CSteering
                 // Update can run before the first KeyEmulationUpdate of a run.
                 emuLeftValue = 0f;
                 emuRightValue = 0f;
-                emuWasHeld = false;
+                emuPressed = false;
+                emuReleased = false;
             }
 
-            /// <summary>Lets other blocks drive this one by emulating its keys.</summary>
+            /// <summary>
+            /// Lets a variable, or another block, drive this one through its keys.
+            /// Besiege routes both down the same path: a key bound to a variable
+            /// reports nothing through Value, IsPressed or IsHeld and turns up here.
+            ///
+            /// This runs once per fixed step, which is the cadence MKey advances its
+            /// emulation snapshot at, so the edges are read here and latched for the
+            /// next SimulateUpdateHost. Read from Update instead they would repeat
+            /// across the frames sharing a fixed step, and a pulse that began and
+            /// ended between two frames would be missed altogether.
+            /// </summary>
             public override void KeyEmulationUpdate()
             {
+                // A client without physics never built the mapper controls.
+                if (leftKey == null) { return; }
+
                 emuLeftValue = leftKey.EmulationValue();
                 emuRightValue = rightKey.EmulationValue();
+
+                // All four every step, and none of them behind a short-circuit: a
+                // key whose edge methods go uncalled for a step is left comparing
+                // against a stale snapshot on the next one.
+                bool leftPressed = leftKey.EmulationPressed();
+                bool rightPressed = rightKey.EmulationPressed();
+                bool leftReleased = leftKey.EmulationReleased();
+                bool rightReleased = rightKey.EmulationReleased();
+
+                emuPressed = emuPressed || leftPressed || rightPressed;
+                emuReleased = emuReleased || leftReleased || rightReleased;
+            }
+
+            /// <summary>
+            /// Samples the two keys, folding in whatever is being emulated, and
+            /// takes the latched emulation edges. Called on every update so a latch
+            /// cannot survive a frame the block bailed out of and fire late.
+            /// </summary>
+            void ReadInput()
+            {
+                input = (leftKey.Value + emuLeftValue) - (rightKey.Value + emuRightValue);
+                keyPressed = leftKey.IsPressed || rightKey.IsPressed || emuPressed;
+                keyReleased = leftKey.IsReleased || rightKey.IsReleased || emuReleased;
+                emuPressed = false;
+                emuReleased = false;
             }
 
             public override void SimulateUpdateHost()
             {
+                ReadInput();
                 if (!hasStarted && !Begin()) { return; }
                 if (!myJoint) { return; }
 
@@ -283,12 +323,6 @@ namespace R2CSteering
                 {
                     return;
                 }
-
-                bool emuHeld = emuLeftValue != 0f || emuRightValue != 0f;
-                input = (leftKey.Value + emuLeftValue) - (rightKey.Value + emuRightValue);
-                keyPressed = leftKey.IsPressed || rightKey.IsPressed || (emuHeld && !emuWasHeld);
-                bool keyReleased = leftKey.IsReleased || rightKey.IsReleased || (!emuHeld && emuWasHeld);
-                emuWasHeld = emuHeld;
 
                 float speed = speedSlider.Value;
                 if (speed == 0f) { return; }

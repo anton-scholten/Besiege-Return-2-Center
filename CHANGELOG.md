@@ -21,8 +21,15 @@ with that version load and behave as they did, apart from the fixes.
   kept the limits, flip and mode it had picked up on the first one — changing the
   mode in the mapper did nothing until the machine was reloaded — and it snapped
   back to the angle it had stopped at.
-- The blocks ignored emulated keys, so nothing but a player could steer them.
-  They now read emulation the way the game's own steering hinge does.
+- The blocks ignored **variables**, and emulated keys generally, so nothing but a
+  player at the keyboard could steer them. A key bound to a variable reports
+  nothing through the ordinary key properties — Besiege delivers it as emulation
+  — and these blocks never looked. They do now, both the level that steers and
+  the press and release edges the Toggle and S2S modes run on.
+- Those edges are read on the physics step and latched, rather than polled from
+  the frame loop, so a short variable pulse is not missed. Simulated against the
+  naive scheme: a one-physics-step pulse was invisible below 60 fps, and is now
+  delivered reliably down to 15.
 
 **Changed**
 
