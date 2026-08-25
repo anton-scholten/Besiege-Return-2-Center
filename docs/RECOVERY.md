@@ -82,7 +82,7 @@ differences that remain are, in full:
 | `SafeAwake` | `AddLimits` takes a seventh argument | the six-argument overload no longer exists |
 | `SimulateUpdateHost` | six inlined blocks became two methods | see below |
 | `SimulateUpdateHost` | reads `emuLeftValue` / `emuRightValue` / `emuWasHeld` | key emulation support |
-| `KeyEmulationUpdate`, `OnSimulateStart` | new | key emulation, and per-run reset |
+| `KeyEmulationUpdate` | new | variables and key emulation |
 | `.ctor`, `SafeAwake` | `UnityEngine.Vector3` where the original built a `Modding.Serialization.Vector3` and let it convert | the conversion is a componentwise copy — checked, in `Vector3::op_Implicit` — so `Vector3.zero` and `new Vector3(1f, 0f, 0f)` are the same values by a shorter route |
 | `SafeAwake` | one `MotionAbout` call per axis rather than three near-identical `switch` arms | free about the spin axis, locked about the other two — which is what the three arms each spelled out |
 | `SimulateUpdateHost` | the startup frame is `Begin`, the toggle latch is `PushToggleInput`, the limit test is `AtLimit`, the per-frame step is `Rate` | each was written out two or three times |

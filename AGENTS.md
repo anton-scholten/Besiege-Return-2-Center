@@ -43,10 +43,10 @@ it, so the rename is invisible to saved machines.
 **Never change `<ID>` in `Mod.xml`.** The game generated it on first load, and changing
 it breaks every saved machine that references the mod. The same goes for
 `<ID>1</ID>` in `Hinge.xml` and `<ID>2</ID>` in `SteeringBlock.xml`, and for the
-module name `R2CSteering`, which is spelled in four places that must agree: the
-`[XmlRoot]` on the module class, the `AddBlockModule` call in `Mod.OnLoad`, and
-the `<R2CSteering>` element inside `<Modules>` in each block XML. The `modid`
-attribute on those elements is the same GUID again.
+module name `R2CSteering`, which has to be spelled the same in the `[XmlRoot]` on
+the module class, in the `AddBlockModule` call in `Mod.OnLoad`, and in the
+`<R2CSteering>` element inside `<Modules>` in *both* block XMLs. The `modid`
+attribute on those two elements is the mod `<ID>` again, not the module name.
 
 **Do not rename a mapper key.** The `key=` attributes in `<ModuleMapperTypes>`
 (`"left"`, `"right"`, `"RotationalSpeed"`, `"tension"`, `"PushToggle"`), the
@@ -108,10 +108,9 @@ base-game numbers are correct for them.
 verbatim, and it is the whole point of the control — a linear multiplier would
 make the slider do almost nothing.
 
-It is applied twice: from `Start`, and again on the startup frame in
-`SimulateUpdateHost`. `Start` runs once on a behaviour that Besiege then reuses
-for later runs, so without the second call a tension changed between runs would
-not take.
+It is applied from `Start`, which runs once per simulation run because the run is
+a fresh clone — see the correction below. An earlier pass applied it a second time
+on the startup frame, for a reason that turned out not to exist.
 
 **The module is a fork of the game's own steering module.** `Modding.Modules.
 Official.SteeringModule` / `SteeringModuleBehaviour` in `Assembly-CSharp.dll` is
@@ -119,11 +118,17 @@ the thing this was adapted from, and it is still the reference to read
 when something here looks odd. Everything that is *not* the mode menu and the
 push toggle should look like that class does today.
 
-**Setup is deferred to the third simulated frame.** `SafeAwake` builds the mapper
-controls, but the *values* in them — the limits, the mode — are not settled until
-the machine has been simulating for a frame, hence the `hasStarted`/`startFrames`
-dance at the top of `SimulateUpdateHost`. The official module does the same, for
-the same reason.
+**Setup is deferred to the third simulated frame, and only half of that is
+inherited.** The official module counts the same three frames, but it counts them
+only to delay one `Rigidbody.WakeUp()`, and it goes on reading its keys while it
+counts. The 2018 code moved the limits and the mode read into that block as well
+and made it `return` until the count is up — so this block is inert for its first
+three simulated frames where the base-game one is not.
+
+Why the values are read there rather than in `Start` is not recorded anywhere and
+was not recoverable from the assembly; keep it unless you can show the mapper is
+settled earlier, because being wrong about that is a block that silently uses
+stale limits.
 
 **`angleMin`/`angleMax` are read once, in `Begin`, and are not the same thing as
 `limits.Min`/`limits.Max`.** The block applies two independent flips to the limits
@@ -164,13 +169,34 @@ Read this before "fixing" any of it back.
 enabled)`; the six-parameter overload the 2018 build called is gone. `true` is
 passed, which is what the official steering module passes.
 
-**Nothing was reset between simulation runs.** Besiege keeps the machine, and so
-these behaviours, alive when you stop simulating, and `hasStarted` was set once
-and never cleared. From the second run on, the limits, the flip and the mode were
-whatever they had been on the first run — changing the mode in the mapper did
-nothing until the machine was reloaded — and `angleToBe` still held the angle the
-block had stopped at, so it snapped straight back there. `OnSimulateStart` now
-winds all of it back.
+**A correction, kept here because it was believed and acted on.** An earlier pass
+added an `OnSimulateStart` that wound `hasStarted`, `angleToBe` and the rest back,
+on the belief that Besiege keeps a block behaviour alive between runs and that the
+2018 code was therefore stale from the second run on. That is wrong twice over, and
+both halves are checkable in a minute:
+
+- `Machine.StartSimulation` ends with `Object.Instantiate` of `buildingMachine`
+  into `simulationClone`, and `SoftEndSimulation` — the only ender — calls
+  `DestroySimMachine`. **Every run gets a fresh clone with fresh components.** No
+  private field survives a run, so there was nothing to wind back.
+- `Modding.ModBlockBehaviour.OnSimulateStart` has exactly one caller:
+  `InternalModding.Blocks.ModBlockBehaviourHandler.Start`, guarded by
+  `isSimulating`. It is not a per-run event *distinct* from `Start` — it is `Start`.
+  So had the premise been true, the "fix" would not have run either.
+
+The reset is gone, and so is the second `ApplyTension` call that existed only to
+pick up a tension changed since a previous run. `Start` runs on every run and
+applies the current value. `OnSimulateStop` is likewise `OnDisable`, not a
+separate event.
+
+**`MKey.IsReleased` is the one key property that does not test `useMessage`.**
+`get_Value`, `get_IsPressed` and `get_IsHeld` all return 0/false the moment a key
+is bound to a variable. `get_IsReleased` guards on `ignored`, on `Value > 0` and on
+`MouseKeyBlocked()` — and not on `useMessage`. Binding a variable leaves the key's
+keycodes in place (`KeySelector.SetVariable` does not clear them), so the physical
+key still raises a release edge on a key the block is supposed to have stopped
+listening to. In S2S that stopped a sweep when the player touched the old arrow key.
+`ReleasedOnKeyboard` restores the symmetry the other three have built in.
 
 **The block ignored emulated keys, and so ignored variables.** Besiege lets a key
 be bound to a *variable* instead of a keyboard key, and lets one block drive

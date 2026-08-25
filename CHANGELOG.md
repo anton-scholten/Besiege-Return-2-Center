@@ -17,10 +17,9 @@ with that version load and behave as they did, apart from the fixes.
   drawn end-on, so it read as a flat plate rather than a hinge; the steering
   block was oversized and off centre. Both now use the same position, rotation
   and scale the built-in blocks use.
-- Nothing was reset between simulation runs. From the second run on, the block
-  kept the limits, flip and mode it had picked up on the first one — changing the
-  mode in the mapper did nothing until the machine was reloaded — and it snapped
-  back to the angle it had stopped at.
+- Tapping a steering key that had been rebound to a variable still registered as
+  a key release, which stopped an S2S sweep. `MKey.IsReleased` is the one key
+  property that does not check for a variable binding.
 - The blocks ignored **variables**, and emulated keys generally, so nothing but a
   player at the keyboard could steer them. A key bound to a variable reports
   nothing through the ordinary key properties — Besiege delivers it as emulation

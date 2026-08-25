@@ -245,26 +245,6 @@ namespace R2CSteering
             }
 
             /// <summary>
-            /// Besiege reuses the behaviour between runs, so per-run state has to be
-            /// wound back or the second run starts where the first stopped and
-            /// ignores anything changed in the mapper since.
-            /// </summary>
-            public override void OnSimulateStart()
-            {
-                hasStarted = false;
-                startFrames = 0;
-                angleToBe = 0f;
-                angleWasNonZero = false;
-                latchedInput = 0f;
-                pushLatched = false;
-                // Update can run before the first KeyEmulationUpdate of a run.
-                emuLeftValue = 0f;
-                emuRightValue = 0f;
-                emuPressed = false;
-                emuReleased = false;
-            }
-
-            /// <summary>
             /// Lets a variable, or another block, drive this one through its keys.
             /// Besiege routes both down the same path: a key bound to a variable
             /// reports nothing through Value, IsPressed or IsHeld and turns up here.
@@ -296,6 +276,17 @@ namespace R2CSteering
             }
 
             /// <summary>
+            /// MKey.IsReleased is the one key property that does not test useMessage,
+            /// so a key bound to a variable still reports the release of the keyboard
+            /// key it kept. Value, IsPressed and IsHeld all guard it; this restores
+            /// the symmetry, or tapping the old key would stop an S2S sweep.
+            /// </summary>
+            static bool ReleasedOnKeyboard(MKey key)
+            {
+                return !key.useMessage && key.IsReleased;
+            }
+
+            /// <summary>
             /// Samples the two keys, folding in whatever is being emulated, and
             /// takes the latched emulation edges. Called on every update so a latch
             /// cannot survive a frame the block bailed out of and fire late.
@@ -304,7 +295,7 @@ namespace R2CSteering
             {
                 input = (leftKey.Value + emuLeftValue) - (rightKey.Value + emuRightValue);
                 keyPressed = leftKey.IsPressed || rightKey.IsPressed || emuPressed;
-                keyReleased = leftKey.IsReleased || rightKey.IsReleased || emuReleased;
+                keyReleased = ReleasedOnKeyboard(leftKey) || ReleasedOnKeyboard(rightKey) || emuReleased;
                 emuPressed = false;
                 emuReleased = false;
             }
@@ -398,10 +389,6 @@ namespace R2CSteering
 
                 if (HasRigidbody) { Rigidbody.WakeUp(); }
                 hasStarted = true;
-
-                // Start() runs once on a behaviour Besiege then reuses, so this is
-                // what picks up a tension changed since the last run.
-                ApplyTension();
 
                 // Two independent flips: FlipInvert is whether the block was
                 // mirrored, flipLimits is a per-block XML setting because the hinge
