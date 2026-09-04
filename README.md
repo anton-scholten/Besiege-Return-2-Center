@@ -1,9 +1,9 @@
 # Besiege Return 2 Center
 
+<img src="Return2Center/Resources/R2C.png" alt="thumbnail" width="200" align="right">
+
 A steering hinge and a steering block that spring back to centre, in
 [Besiege](https://store.steampowered.com/app/346010/Besiege/).
-
-![The steering hinge returning to centre](Previous_stuff/R2C.gif)
 
 The stock steering blocks stay where you left them. These come back to neutral
 the moment you let go of the key — which is what you want for a car, a plane, or
@@ -12,6 +12,8 @@ anything you have to drive rather than aim.
 They are the built-in hinge and steering block otherwise: same meshes, same
 limits, same rotation speed and tension sliders, and they snap onto the same
 grid.
+
+<br clear="right">
 
 ## Install
 
@@ -31,9 +33,10 @@ compiler.
 
 ## The blocks
 
-Two of them, a hinge and a block, matching the shape of the base-game pair.
+<img src="Previous_stuff/R2C.gif" alt="The steering hinge returning to centre" height="400"/>
+<img src="Previous_stuff/Block_Menu1.jpg" alt="Both blocks in the block menu" height="400"/>
 
-![Both blocks in the block menu](Previous_stuff/Block_Menu1.jpg)
+Two of them, a hinge and a block, matching the shape of the base-game pair.
 
 ## Settings
 
@@ -70,3 +73,11 @@ It was recovered from the 2018 assembly, which is a story of its own —
 [docs/RECOVERY.md](docs/RECOVERY.md). If you are changing anything, read
 [AGENTS.md](AGENTS.md) first: several names in here are load-bearing for saved
 machines and cannot be renamed.
+
+## Notes
+
+Details land in `Player.log` and in the in-game console with `show_logs true`.
+
+## Licence
+
+GPL-3.0. Besiege is Spiderling Studios'; nothing of theirs is redistributed here.
